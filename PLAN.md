@@ -105,24 +105,20 @@ flowchart LR
 ## Giai đoạn 5: Hoàn tất Báo cáo & Nộp bài (~45')
 *Mục tiêu: Lập báo cáo trung thực, đầy đủ bằng chứng số liệu và vượt qua kiểm thử nộp bài.*
 
-- [ ] **5.1 Điền đầy đủ 6 mục trong `submission/REPORT.md`**
+- [x] **5.1 Điền đầy đủ 6 mục trong `submission/REPORT.md`**
   - Mục 1: Kết luận (Release/Hold/Rework) kèm số liệu ảnh vào/ra và lý do chính.
   - Mục 2: Bảng thống kê mã lỗi & Phân việc (máy sửa vs người duyệt).
   - Mục 3: Bảng đối chiếu Calibration (trước $\rightarrow$ sau) & Phân tích điểm mù của calibration.
   - Mục 4: Bằng chứng cửa chặn hoạt động đúng & Tối thiểu 2 điểm mù của pipeline.
   - Mục 5: Kết quả train so sánh (hoặc ghi rõ "chưa chạy" nếu không train).
   - Mục 6: Quyết định cuối cùng & Ghi chú sử dụng AI.
-- [ ] **5.2 Hoàn thiện thông tin nhận diện**
-  - Cập nhật dòng tiêu đề `README.md` theo định dạng: `# Day 09 Lab — <Họ và tên>: <MSHV> - <Họ và tên>`.
-- [ ] **5.3 Kiểm tra tự động trước khi nộp**
-  - Chạy script kiểm tra:
-    ```powershell
-    python scripts/check_submission.py --no-train   # Nếu chưa train Colab
-    # hoặc: python scripts/check_submission.py       # Nếu đã có kết quả train
-    ```
-  - Đảm bảo 0 LỖI.
-- [ ] **5.4 Git Commit & Push**
-  - Đảm bảo tối thiểu 5 commit có thông điệp rõ ràng mang tên bạn.
+- [x] **5.2 Hoàn thiện thông tin nhận diện**
+  - Cập nhật dòng tiêu đề `README.md` theo định dạng: `# Day 09 Lab — Phan Lê Hoàng Phúc: 2A202603180 - Phan Lê Hoàng Phúc`.
+- [x] **5.3 Kiểm tra tự động trước khi nộp**
+  - Chạy script kiểm tra: `python scripts/check_submission.py --no-train`
+  - Đảm bảo **0 LỖI**.
+- [x] **5.4 Git Commit & Push**
+  - Đảm bảo các commit có thông điệp rõ ràng mang tên bạn.
   - Kiểm tra không commit các file nhị phân nặng (`work/`, `*.pt`).
 
 ---
