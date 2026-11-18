@@ -18,14 +18,14 @@ flowchart LR
 ## Giai đoạn 1: Chuẩn bị môi trường & Khảo sát dữ liệu (~30')
 *Mục tiêu: Đưa môi trường về trạng thái sẵn sàng, xác nhận baseline test và quan sát trực quan dữ liệu.*
 
-- [ ] **1.1 Khởi tạo môi trường ảo Python & Cài đặt thư viện**
+- [x] **1.1 Khởi tạo môi trường ảo Python & Cài đặt thư viện**
   - Tạo venv `.venv`: `python -m venv .venv`
   - Kích hoạt môi trường và cài đặt: `pip install -r requirements.txt`
   - Cấu hình biến môi trường trên Windows PowerShell: `$env:PYTHONUTF8=1`
-- [ ] **1.2 Kiểm tra bộ test ban đầu**
+- [x] **1.2 Kiểm tra bộ test ban đầu**
   - Chạy `python -m pytest -q`
   - Xác nhận kết quả tiêu chuẩn ban đầu: **55 failed, 24 passed** (ứng với 5 check mẫu đã viết sẵn).
-- [ ] **1.3 Trực quan hóa và quan sát nhãn thực tế**
+- [x] **1.3 Trực quan hóa và quan sát nhãn thực tế**
   - Chạy `python scripts/viz_labels.py img_0001 img_0030` để render box lên ảnh vào `work/viz/`.
   - Mở xem trực quan ~10 ảnh, ghi lại 3 lỗi nhãn phát hiện bằng mắt (dùng cho Mục 4 của báo cáo).
 
@@ -34,35 +34,35 @@ flowchart LR
 ## Giai đoạn 2: Lập trình 4 Module cốt lõi theo TDD (~2 giờ 15')
 *Quy trình TDD: Đọc docstring stub $\rightarrow$ Viết code $\rightarrow$ Chạy pytest $\rightarrow$ Sửa đến khi xanh $\rightarrow$ Git commit.*
 
-- [ ] **2.1 Module 1 — `pipeline/checks/label_format.py` (Script 2)**
+- [x] **2.1 Module 1 — `pipeline/checks/label_format.py` (Script 2)**
   - Bắt các lỗi định dạng nhãn YOLO:
     - Thiếu/thừa số cột trên dòng.
     - Tọa độ hoặc kích thước box chứa giá trị không hợp lệ (NaN, Inf, chuỗi không phải số).
     - Box diện tích $\le 0$ (`BOX_ZERO_AREA`, `BOX_NEGATIVE`).
     - Box tràn biên ảnh vượt quá dung sai `overflow_tol` (`BOX_OUT_OF_BOUNDS`).
     - ID lớp nằm ngoài danh sách quy định (`UNKNOWN_CLASS`).
-  - *Kiểm thử:* `pytest tests/test_label_format.py -q`
-- [ ] **2.2 Module 2 — `pipeline/steps/gate.py` (Cửa chặn chất lượng)**
+  - *Kiểm thử:* `pytest tests/test_label_format.py -q` (14/14 passed)
+- [x] **2.2 Module 2 — `pipeline/steps/gate.py` (Cửa chặn chất lượng)**
   - Phân loại trạng thái chất lượng của lô dữ liệu:
     - **`Rework` (mã thoát 20):** Khi còn bất kỳ lỗi nghiêm trọng bắt buộc (`HARD_ERRORS`) chưa được sửa.
     - **`Hold` (mã thoát 10):** Không còn lỗi bắt buộc nhưng tỷ lệ ảnh có cảnh báo chưa duyệt $\ge$ `warn_ratio_hold` (10%).
     - **`Release` (mã thoát 0):** Không còn lỗi bắt buộc và tỷ lệ cảnh báo $< 10\%$.
-  - *Kiểm thử:* `pytest tests/test_gate.py -q`
-- [ ] **2.3 Module 3 — `pipeline/steps/autofix.py` (Tự động sửa lỗi)**
+  - *Kiểm thử:* `pytest tests/test_gate.py -q` (10/10 passed)
+- [x] **2.3 Module 3 — `pipeline/steps/autofix.py` (Tự động sửa lỗi)**
   - Tự động khắc phục an toàn các lỗi quy tắc:
     - Kẹp tọa độ box tràn về trong khoảng `[0.0, 1.0]`.
     - Loại bỏ các dòng nhãn có diện tích bằng 0 hoặc bị hỏng nặng.
     - Ghi lại nhật ký thay đổi minh bạch ra `03_fixes.csv` (tuyệt đối không sửa đè `data/raw`).
-  - *Kiểm thử:* `pytest tests/test_autofix.py -q`
-- [ ] **2.4 Module 4 — `pipeline/checks/second_opinion.py` (Mô hình làm ý kiến thứ hai)**
+  - *Kiểm thử:* `pytest tests/test_autofix.py -q` (11/11 passed)
+- [x] **2.4 Module 4 — `pipeline/checks/second_opinion.py` (Mô hình làm ý kiến thứ hai)**
   - Đọc cache dự đoán từ `data/cache/checker_preds.json` (mô hình YOLO26l).
   - So sánh IoU và class giữa nhãn người và dự đoán model:
     - Phát hiện cảnh báo sót nhãn (`POSSIBLE_MISSING`).
     - Phát hiện cảnh báo nhầm lớp (`POSSIBLE_WRONG_CLASS`).
     - Phát hiện cảnh báo box vẽ quá lỏng lẻo (`POSSIBLE_LOOSE_BOX`).
     - Phát hiện cảnh báo box thừa không có đối tượng (`POSSIBLE_FALSE_POS`).
-  - *Kiểm thử:* `pytest tests/test_second_opinion.py -q`
-- [ ] **2.5 Kiểm tra toàn bộ Test Suite**
+  - *Kiểm thử:* `pytest tests/test_second_opinion.py -q` (15/15 passed)
+- [x] **2.5 Kiểm tra toàn bộ Test Suite**
   - Chạy `python -m pytest -q` $\rightarrow$ Xác nhận **79 passed (100% xanh)**.
 
 ---
