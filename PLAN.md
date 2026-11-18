@@ -70,25 +70,25 @@ flowchart LR
 ## Giai đoạn 3: Hiệu chuẩn ngưỡng (Calibration) (~30')
 *Mục tiêu: Dùng 39 ảnh chuẩn có đáp án sẵn tại `data/calib/` để chọn 2 tham số tối ưu.*
 
-- [ ] **3.1 Chạy công cụ quét ngưỡng (Sweep)**
+- [x] **3.1 Chạy công cụ quét ngưỡng (Sweep)**
   - Chạy `python -m pipeline.calibrate` (hoặc lệnh tương ứng trên Windows).
   - Thu được báo cáo sweep tại `submission/calibration/calibration_report.md` và `.json`.
-- [ ] **3.2 Phân tích & Chọn 2 ngưỡng tối ưu trong `configs/pipeline.yaml`**
-  - Hiệu chuẩn `duplicates.phash_dist`: Cân bằng giữa việc loại bỏ ảnh trùng/gần trùng mà không xóa nhầm ảnh khác nhau.
-  - Hiệu chuẩn `second_opinion.conf`: Cân bằng Precision vs Recall để bắt được nhãn nghi vấn mà không gây quá tải cho ngân sách duyệt người (80 ảnh).
-- [ ] **3.3 Kiểm chứng tính hợp lý trên dữ liệu thực (`data/raw/`)**
-  - Mở xem trực quan các cặp ảnh bị gán nhãn trùng để đối chiếu thực tế.
+- [x] **3.2 Phân tích & Chọn 2 ngưỡng tối ưu trong `configs/pipeline.yaml`**
+  - Đã hiệu chuẩn `duplicates.phash_dist = 8` (Recall tăng lên 0.67, Precision 1.00).
+  - Đã hiệu chuẩn `second_opinion.conf = 0.60` (Recall 1.00 cho missing, Precision wrong_class đạt 0.62).
+- [x] **3.3 Kiểm chứng tính hợp lý trên dữ liệu thực (`data/raw/`)**
+  - Mở xem trực quan và phát hiện bẫy calibration (phash_dist=16 xóa nhầm img_0011/img_0008).
 
 ---
 
 ## Giai đoạn 4: Chạy toàn trình Pipeline & Kiểm thử Cửa chặn (~20')
 *Mục tiêu: Đảm bảo pipeline chạy tự động trơn tru từ đầu đến cuối và sinh đủ 8 artifact báo cáo.*
 
-- [ ] **4.1 Thực thi Pipeline chính thức**
-  - Chạy `python -m pipeline.run` (kiểm tra mã thoát qua `$LASTEXITCODE`).
-  - Kiểm tra các file báo cáo sinh ra tại `submission/reports/` (`01_intake` $\dots$ `08_summary.json`).
-  - Kiểm tra dataset xuất bản tại `submission/export/clean_v1/` kèm `manifest.json`.
-- [ ] **4.2 Thực nghiệm kiểm chứng Cửa chặn (Gate Proof)**
+- [x] **4.1 Thực thi Pipeline chính thức**
+  - Chạy `python -m pipeline.run` (kết luận HOLD, mã thoát 10).
+  - Đã sinh đủ 8 file báo cáo tại `submission/reports/` (`01_intake` $\dots$ `08_summary.json`).
+  - Đã xuất bản dataset tại `submission/export/clean_v1/` kèm `manifest.json`.
+- [x] **4.2 Thực nghiệm kiểm chứng Cửa chặn (Gate Proof)**
   - Chạy thử nghiệm với `--budget 0`:
     ```powershell
     python -m pipeline.run --budget 0 --reports work/rep_nb --export-dir work/exp_nb

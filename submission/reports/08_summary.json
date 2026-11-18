@@ -1,0 +1,18 @@
+{
+  "verdict": {
+    "decision": "Hold",
+    "n_errors": 0,
+    "n_warn_images": 38,
+    "n_images": 203,
+    "warn_ratio": 0.1872,
+    "reasons": [
+      "Tỉ lệ ảnh có cảnh báo chưa duyệt là 18.72% (38/203) >= ngưỡng cho phép 10.00%."
+    ]
+  },
+  "reviewed": 80,
+  "budget": 80,
+  "seconds": 5.3,
+  "exported": "D:\\VINUNI\\K5-L23-DAY09-PhanLeHoangPhuc-2A202603180-AutoQCPipeline\\submission\\export\\clean_v1",
+  "config_sha1": "fef1b320f114c7fa42e148cc9336e6c8831952fb",
+  "review_sim_sha1": "7988ca22827f780a7043a2300490e679a1697154"
+}
