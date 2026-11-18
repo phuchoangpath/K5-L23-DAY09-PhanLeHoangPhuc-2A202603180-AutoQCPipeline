@@ -13,27 +13,158 @@ và trả về danh sách thay đổi; mỗi phần tử có khoá: image, line,
 | MISSING_LABEL_FILE                             | KHÔNG sửa file (máy không thể bịa nhãn): ghi 1 dòng fix, before="(không có file)", after="chuyển người gán" | "needs_label" |
 | BAD_CLASS_NAME                                 | ghi lại `names` trong data.yaml đúng `cfg["classes"]` | "rename_classes" |
 | DUP_IMAGE_*, LEAK_TEST, CORRUPT_IMAGE, BAD_SIZE| xoá ảnh + nhãn khỏi `ds`                    | "remove_image"   |
-
-Bẫy cần nghĩ tới (có test cho từng cái)
-- Một file có NHIỀU dòng lỗi: số dòng trong `issues` là số dòng GỐC. Nếu xoá từng dòng một thì số dòng lệch.
-  Gom theo file, rồi ghi lại MỘT lần.
-- Sau khi cắt, box có thể không còn diện tích (nằm hẳn ngoài ảnh): lúc đó xoá dòng thay vì ghi box rỗng.
-- Một dòng có 2 lỗi (vd. BOX_OUT_OF_IMAGE + DUP_BOX): xoá dòng thắng, chỉ ghi 1 fix `drop_line`, không ghi thêm `clip_box`. Dòng trống ở giữa file vẫn đếm vào số dòng gốc.
-- Ảnh vừa bị xoá (DUP_IMAGE_*...) mà còn issue dòng của chính nó: bỏ qua êm, không được báo lỗi/chết.
-- Không động tới lỗi WARN (cảnh báo là việc của người). Không sửa file ở `data/raw/` — chỉ sửa `ds`.
-- Chạy lần 2 trên dữ liệu đã sửa phải không làm gì thêm (idempotent) — NGOẠI LỆ duy nhất: `needs_label` được ghi lại mỗi lần còn lỗi `MISSING_LABEL_FILE` (vì ảnh vẫn chưa có nhãn).
-
-- `needs_label` KHÔNG tạo file nhãn rỗng (rỗng = "ảnh nền", khác với "chưa gán"). `review_queue` sẽ đẩy ảnh này lên đầu hàng đợi cho người.
-
-Gợi ý: `yaml.safe_load / safe_dump`.
 """
-from collections import defaultdict  # noqa: F401
+from collections import defaultdict
+from pathlib import Path
+import yaml
 
-import yaml  # noqa: F401
+from ..common import ERROR, parse_yolo_line
 
-from ..common import ERROR, parse_yolo_line  # noqa: F401
+DROP_CODES = {"BAD_FORMAT", "BAD_CLASS_ID", "BOX_ZERO", "DUP_BOX"}
+REMOVE_IMAGE_CODES = {"LEAK_TEST", "CORRUPT_IMAGE", "BAD_SIZE"}
 
 
 def fix(ds, issues, cfg):
-    # TODO
-    raise NotImplementedError("autofix chưa làm")
+    # Chỉ xử lý lỗi ERROR
+    err_issues = [i for i in issues if i.severity == ERROR]
+    fixes = []
+
+    # 1. Sửa BAD_CLASS_NAME trong data.yaml
+    if any(i.code == "BAD_CLASS_NAME" for i in err_issues):
+        if ds.yaml_path.exists():
+            try:
+                data = yaml.safe_load(ds.yaml_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                data = {}
+            old_names = data.get("names", [])
+            data["names"] = list(cfg["classes"])
+            ds.yaml_path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+            fixes.append({
+                "image": "data.yaml",
+                "line": "",
+                "action": "rename_classes",
+                "before": str(old_names),
+                "after": str(cfg["classes"]),
+            })
+
+    # 2. Xoá ảnh + nhãn cho các lỗi cấp ảnh (remove_image)
+    removed_stems = set()
+    for i in err_issues:
+        if i.code in REMOVE_IMAGE_CODES or i.code.startswith("DUP_IMAGE"):
+            stem = i.image
+            if stem not in removed_stems:
+                removed_stems.add(stem)
+                img_p = ds.image_path(stem)
+                if img_p and img_p.exists():
+                    img_p.unlink()
+                lbl_p = ds.label_path(stem)
+                if lbl_p.exists():
+                    lbl_p.unlink()
+                fixes.append({
+                    "image": stem,
+                    "line": "",
+                    "action": "remove_image",
+                    "before": "exists",
+                    "after": "removed",
+                })
+
+    # 3. Ghi nhận MISSING_LABEL_FILE (needs_label)
+    for i in err_issues:
+        if i.code == "MISSING_LABEL_FILE":
+            stem = i.image
+            if stem in removed_stems:
+                continue
+            fixes.append({
+                "image": stem,
+                "line": "",
+                "action": "needs_label",
+                "before": "(không có file)",
+                "after": "chuyển người gán",
+            })
+
+    # 4. Sửa các lỗi cấp dòng trong file nhãn (drop_line, clip_box)
+    line_issues_by_stem = defaultdict(lambda: defaultdict(list))
+    for i in err_issues:
+        if i.line is not None and (i.code in DROP_CODES or i.code == "BOX_OUT_OF_IMAGE"):
+            if i.image not in removed_stems:
+                line_issues_by_stem[i.image][i.line].append(i)
+
+    for stem in sorted(line_issues_by_stem.keys()):
+        lbl_p = ds.label_path(stem)
+        if not lbl_p.exists():
+            continue
+
+        raw_lines = lbl_p.read_text(encoding="utf-8", errors="replace").splitlines()
+        file_issues = line_issues_by_stem[stem]
+        new_lines = []
+
+        for line_no, line_text in enumerate(raw_lines, 1):
+            if line_no not in file_issues:
+                new_lines.append(line_text)
+                continue
+
+            iss_list = file_issues[line_no]
+            codes = {iss.code for iss in iss_list}
+
+            # Nếu có bất kỳ lỗi drop_line nào -> xoá dòng thắng (ưu tiên drop_line)
+            if any(c in DROP_CODES for c in codes):
+                fixes.append({
+                    "image": stem,
+                    "line": line_no,
+                    "action": "drop_line",
+                    "before": line_text,
+                    "after": "",
+                })
+                continue
+
+            # Nếu chỉ có lỗi BOX_OUT_OF_IMAGE -> clip box
+            if "BOX_OUT_OF_IMAGE" in codes:
+                try:
+                    c, x, y, w, h = parse_yolo_line(line_text)
+                    left = x - w / 2
+                    right = x + w / 2
+                    top = y - h / 2
+                    bottom = y + h / 2
+
+                    clipped_left = max(0.0, min(1.0, left))
+                    clipped_right = max(0.0, min(1.0, right))
+                    clipped_top = max(0.0, min(1.0, top))
+                    clipped_bottom = max(0.0, min(1.0, bottom))
+
+                    new_w = clipped_right - clipped_left
+                    new_h = clipped_bottom - clipped_top
+
+                    if new_w <= 0.0 or new_h <= 0.0:
+                        fixes.append({
+                            "image": stem,
+                            "line": line_no,
+                            "action": "drop_line",
+                            "before": line_text,
+                            "after": "",
+                        })
+                        continue
+
+                    new_x = clipped_left + new_w / 2
+                    new_y = clipped_top + new_h / 2
+                    new_line_text = f"{int(c)} {new_x:.6f} {new_y:.6f} {new_w:.6f} {new_h:.6f}"
+                    new_lines.append(new_line_text)
+                    fixes.append({
+                        "image": stem,
+                        "line": line_no,
+                        "action": "clip_box",
+                        "before": line_text,
+                        "after": new_line_text,
+                    })
+                except Exception:
+                    fixes.append({
+                        "image": stem,
+                        "line": line_no,
+                        "action": "drop_line",
+                        "before": line_text,
+                        "after": "",
+                    })
+                    continue
+
+        lbl_p.write_text("\n".join(new_lines) + ("\n" if new_lines else ""), encoding="utf-8")
+
+    return fixes
