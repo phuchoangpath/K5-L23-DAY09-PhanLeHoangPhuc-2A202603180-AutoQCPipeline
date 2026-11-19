@@ -7,4 +7,3 @@ __pycache__/
 *.pt
 runs/
 _instructor/solution/
-submission/*draft*
